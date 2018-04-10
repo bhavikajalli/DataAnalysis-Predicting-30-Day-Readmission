@@ -21,7 +21,7 @@ The criteria for Data Extraction included:
 - Medications administered 
 
 The dataset after cleaning has a total of  57,251 observations and 13 features. The features have been selected based on their Information Gain and Chi-Square Gain
-![alt text]()
+![alt text](https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/IG.png)
 
 
 
