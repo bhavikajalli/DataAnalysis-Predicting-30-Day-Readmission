@@ -29,6 +29,7 @@ data_cleaned = data_cleaned %>% filter(admission_type_id != 'Not Available',admi
 
 ```
 
+Checking for missing data
 ```{r}
 #Plot the Missing data
 #data_cleaned[data_cleaned == '?'] = NA
@@ -40,6 +41,7 @@ data_cleaned = data_cleaned %>% filter(race != '?',diag_2 != '?',diag_3 != '?')
 #summary(data_cleaned)
 ```
 
+Using the Medical codes to find the Diagnosis
 ```{r}
 #Creating columns called Diagnosis 1,2 and 3 based on the the diagnosis codes.
 data_cleaned = data_cleaned %>%
@@ -88,11 +90,11 @@ ggplot(data= data_cleaned)+geom_bar(aes(x=readmitted,fill = readmitted),show.leg
 ggplot(data= data_cleaned)+geom_boxplot(aes(x=readmitted,y = number_inpatient,fill = readmitted),show.legend = TRUE,alpha = 0.1)+labs(title = "Readmitted Patients Vs Number of Inpatient Visits")
 
 ```
-
+The correlation Plot:
 ```{r}
 #The correlation plot
 library(polycor)
-x = hetcor(data,use="pairwise.complete.obs")
+x = hetcor(data_cleaned,use="pairwise.complete.obs")
 corrplot(x[["correlations"]],method = color)
 ```
 
@@ -119,6 +121,7 @@ str(data_cleaned)
 
 ```
 
+The XGBoost Modell:
 
 ```{r}
 #The XGBoost model with Hyper parameter tuning with 5 fold Cross Validation
@@ -171,6 +174,7 @@ calculateConfusionMatrix(predictions)
 performance(predictions,measures = list(acc,auc,ppv,tpr))
 ```
 
+The RandomForrest Model:
 
 ```{r}
 # The RandomForrest Model
@@ -208,6 +212,8 @@ predictions = predict(rforest, newdata = test_data)
 calculateConfusionMatrix(predictions)
 performance(predictions,measures = list(acc,auc,ppv,tpr))
 ```
+
+RandoForrest for the balanced data:
 
 ```{r}
 ##Equal Data
