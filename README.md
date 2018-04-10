@@ -11,6 +11,20 @@ A successful model will
 - May reduce 30-day readmission rate
 - Outpatient interventions for high-risk patients may save resources and may result in better outcomes
 
+##Data Set
+The Patient Data is from 1999-2008 from various U.S. Hospitals in Cerner Corporation, Kansas City . The data is available in the folder marked Data and also at the UCI Machine Learning Repository.
+The criteria for Data Extraction included:
+- Inpatient encounter
+- A “diabetic” encounter
+- Length of stay 1 - 14 days
+- Lab tests performed 
+- Medications administered 
+
+The dataset after cleaning has a total of  57,251 observations and 13 features. The features have been selected based on their Information Gain and Chi-Square Gain
+![alt text]()
+
+
+
 
 
 
