@@ -32,7 +32,7 @@ The dataset has minimal missing values. Admission Type had missing values and we
 
 #### Correlation Between the features
 The Correlation between the features was plotted as following
-![alt text](https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/corr.png)
+![alt text](https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/corr.png | width = 100 )
 
 The features are independent of each other and can be used to predict the 30 Day readmittance rate.
 
