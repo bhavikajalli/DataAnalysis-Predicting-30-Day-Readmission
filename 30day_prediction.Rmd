@@ -1,0 +1,453 @@
+---
+title: "LHS 610: Final Project"
+output: html_notebook
+author: "Bhavika Jalli"
+---
+
+Loading the dataset and cleaning
+
+```{r}
+library(tidyverse)
+data = read_csv("diabetic_data_initial.csv")
+head(data)
+#table(data$readmitted)
+```
+
+```{r}
+#Cleaning the data and selecting and Recoding the columns for easier use
+
+data_cleaned = data %>% 
+  select(encounter_id,race,A1Cresult,num_lab_procedures,number_emergency,number_inpatient, age,gender, admission_type_id, time_in_hospital, num_medications, diag_1, diag_2,diag_3,change,readmitted)
+
+
+data_cleaned$admission_type_id <- recode(data_cleaned$admission_type_id,`1`= 'Emergency',`2`= 'Urgent',`3` = 'Elective',`4` = 'Newborn',`5` = 'Not Available',`6` = 'NULL',`7` = 'Trauma Center',`8` = 'Not Mapped')
+
+data_cleaned = data_cleaned %>% filter(admission_type_id != 'Not Available',admission_type_id != 'NULL',admission_type_id !='Not Mapped')
+
+data_cleaned = data_cleaned %>% filter(race != '?',diag_2 != '?',diag_3 != '?')
+
+#summary(data_cleaned)
+
+data_cleaned = data_cleaned %>%
+  mutate(Diagnosis_1 = case_when((diag_1 >= 460 & diag_1 <= 519) | diag_1 == 786 ~ 'Respiratory_Disease', 
+                                 (diag_1 >= 390 & diag_1 <= 459) | diag_1 == 785 ~ 'Circulatory_Disease',
+                                 (diag_1 >= 520 & diag_1 <= 579) | diag_1 == 787 ~ "Digestive_Disease",
+                                 diag_1 >= 800 & diag_1 <= 999 ~ "Injury&Poisoning",
+                                 diag_1 >= 710 & diag_1 <= 739 ~ "Musculoskeletal",
+                                 (diag_1 >= 580 & diag_1 <= 629) | diag_1 == 788 ~ "GenetoUrinary",
+                                 diag_1 >= 140 & diag_1 <= 239 ~ "Neoplasms",
+                                 startsWith(diag_1,'250') ~ "Diabetes",
+                                 TRUE ~ 'Others'))
+
+data_cleaned = data_cleaned %>%
+  mutate(Diagnosis_2 = case_when((diag_2 >= 460 & diag_2 <= 519) | diag_2 == 786 ~ 'Respiratory_Disease', 
+                                 (diag_2 >= 390 & diag_2 <= 459) | diag_2 == 785 ~ 'Circulatory_Disease',
+                                 (diag_2 >= 520 & diag_2 <= 579) | diag_2 == 787 ~ "Digestive_Disease",
+                                 diag_2 >= 800 & diag_2 <= 999 ~ "Injury&Poisoning",
+                                 diag_2 >= 710 & diag_2 <= 739 ~ "Musculoskeletal",
+                                 (diag_2 >= 580 & diag_2 <= 629) | diag_2 == 788 ~ "GenetoUrinary",
+                                 diag_2 >= 140 & diag_2 <= 239 ~ "Neoplasms",
+                                 startsWith(diag_2,'250') ~ "Diabetes",
+                                 TRUE ~ 'Others'))
+data_cleaned = data_cleaned %>%
+  mutate(Diagnosis_3 = case_when((diag_3 >= 460 & diag_3 <= 519) | diag_3 == 786 ~ 'Respiratory_Disease', 
+                                 (diag_3 >= 390 & diag_3 <= 459) | diag_3 == 785 ~ 'Circulatory_Disease',
+                                 (diag_3 >= 520 & diag_3 <= 579) | diag_3 == 787 ~ "Digestive_Disease",
+                                 diag_3 >= 800 & diag_3 <= 999 ~ "Injury&Poisoning",
+                                 diag_3 >= 710 & diag_3 <= 739 ~ "Musculoskeletal",
+                                 (diag_3 >= 580 & diag_3 <= 629) | diag_3 == 788 ~ "GenetoUrinary",
+                                 diag_3 >= 140 & diag_3 <= 239 ~ "Neoplasms",
+                                 startsWith(diag_3,'250') ~ "Diabetes",
+                                 TRUE ~ 'Others'))
+
+
+data_cleaned = data_cleaned %>% select(-diag_1,-diag_2,-diag_3)
+data_cleaned = data_cleaned %>% filter(readmitted != '>30')
+
+ggplot(data= data_cleaned)+geom_bar(aes(x=readmitted,fill = readmitted),show.legend = TRUE)+labs(title = "Distribution of readmitted Patients")
+
+#The data is unbalanced. 
+
+#ggplot(data= data_cleaned)+geom_boxplot(aes(x=readmitted,y = number_inpatient,fill = readmitted),show.legend = TRUE,alpha = 0.1)+labs(title = "Readmitted Patients Vs Number of Inpatient Visits")
+
+```
+
+
+Machine Learning Tasks:
+
+```{r}
+library(mlr)
+#Creating dummy variables for the columns race,A1Cresult,age,gender,admission type and Diagnosis
+x = data_cleaned
+labels = data_cleaned %>% select(readmitted)
+#encounter_id = data_cleaned %>% select(encounter_id)
+data_cleaned = data_cleaned %>% select(-readmitted)
+#data_cleaned = data_cleaned %>% select(-encounter_id)
+
+data_cleaned = data_cleaned %>% mutate_if(is.character, as.factor)
+
+data_dummy = data_cleaned %>% select(encounter_id:change, Diagnosis_1:Diagnosis_3) %>% createDummyFeatures()
+#data_dummy$encounter_id = x$encounter_id
+data_dummy$readmitted = x$readmitted
+
+data_cleaned = data_dummy
+data_cleaned = data_cleaned %>% mutate_if(is.character, as.factor)
+#data_cleaned = data_cleaned %>% filter(readmitted != 'NO')
+
+data_cleaned$readmitted = recode(data_cleaned$readmitted,'<30' = '1','NO' = '0')
+str(data_cleaned)
+#The structure of the data tells us more about the factors and columns
+
+```
+
+```{r}
+set.seed(1000)
+train_data = data_cleaned %>% sample_frac(0.66)
+
+test_data = setdiff(data_cleaned,train_data)
+
+# remove the id (not important for prediction)
+train_data = train_data %>% select(-encounter_id)
+test_data = test_data %>% select(-encounter_id)
+
+#train_data = train_data %>% mutate_if(is.factor, as.character)
+
+train_task = makeClassifTask(data = train_data,
+                              target = 'readmitted',positive = '1')
+#XGBOOST
+getParamSet("classif.xgboost")
+xg_set <- makeLearner("classif.xgboost", predict.type = "prob")
+
+#define parameters for tuning
+xg_ps <- makeParamSet(
+makeIntegerParam("nrounds",lower=200,upper=600),
+makeIntegerParam("max_depth",lower=3,upper=20),
+makeNumericParam("lambda",lower=0.55,upper=0.60),
+makeNumericParam("eta", lower = 0.001, upper = 0.5),
+makeNumericParam("subsample", lower = 0.10, upper = 0.80),
+makeNumericParam("min_child_weight",lower=1,upper=5),
+makeNumericParam("colsample_bytree",lower = 0.2,upper = 0.8)
+)
+
+#define search function
+rancontrol <- makeTuneControlRandom(maxit = 100L) #do 100 iterations
+
+#3 fold cross validation
+set_cv <- makeResampleDesc("CV",iters = 3L)
+
+#tune parameters
+xg_tune <- tuneParams(learner = xg_set, task = train_task, resampling = set_cv,measures = auc,par.set = xg_ps, control = rancontrol)
+
+#set parameters
+xg_new <- setHyperPars(learner = xg_set, par.vals = xg_tune$x)
+
+#train model
+xgmodel <- train(xg_set, train_task)
+
+#test model
+predictions <- predict(xgmodel, newdata = test_data )
+calculateConfusionMatrix(predictions)
+performance(predictions,measures = list(acc,auc,ppv,tpr))
+```
+
+
+```{r}
+set.seed(1000)
+#data_t = data_cleaned[sample(1:nrow(data_cleaned), 15000,
+#  	replace=FALSE),]
+#sample(data_cleaned, size, replace = FALSE, prob = NULL)
+
+train_data = data_cleaned %>% sample_frac(0.66)
+
+test_data = setdiff(data_cleaned,train_data)
+
+# remove the id (not important for prediction)
+train_data = train_data %>% select(-encounter_id)
+test_data = test_data %>% select(-encounter_id)
+
+#Logistic Regression
+# model_lr = glm(readmitted~.,family=binomial(link='logit'),data=train_data)
+# 
+# fitted.results <- predict(model_lr,newdata=test_data,type='response')
+# fitted.results <- ifelse(fitted.results > 0.5,1,0)
+# 
+# misClasificError <- mean(fitted.results != test_data$readmitted)
+# print(paste('Accuracy',1-misClasificError))
+# 
+# library(ROCR)
+# p <- predict(model_lr, newdata=test_data, type="response")
+# pr <- prediction(p, test_data$readmitted)
+# prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+# plot(prf)
+# 
+# auc <- performance(pr, measure = "auc")
+# auc <- auc@y.values[[1]]
+# auc
+
+
+#Random Forest
+train_task = makeClassifTask(data = train_data,
+                              target = 'readmitted',positive = '1')
+
+#train_task <- normalizeFeatures(train_task,method = "standardize")
+
+
+rf = makeLearner("classif.randomForest", predict.type = "prob",par.vals = list(mtry = 10))
+# rf$par.vals <- list(importance = TRUE)
+# rf_param <- makeParamSet(
+# makeIntegerParam("ntree",lower = 50, upper = 500),
+# makeIntegerParam("mtry", lower = 3, upper = 10),
+# makeIntegerParam("nodesize", lower = 10, upper = 50)
+# )
+# rancontrol <- makeTuneControlRandom(maxit = 50L)
+# set_cv <- makeResampleDesc("CV",iters = 5L)
+# rf_tune <- tuneParams(learner = rf, resampling = set_cv, task = train_task, par.set = rf_param, control = rancontrol, measures = auc)
+
+rf <- setHyperPars(rf, par.vals = list(ntree=500,mtry = 4,nodesize = 12))
+rforest <- train(rf, train_task)
+predictions = predict(rforest, newdata = test_data)
+calculateConfusionMatrix(predictions)
+performance(predictions,measures = list(acc,auc,ppv,tpr))
+```
+
+
+```{r}
+#train_data = train_data %>% select(number_inpatient,number_emergency,num_medications,time_in_hospital,change.Ch,change.No,num_lab_procedures,Diagnosis_1.Diabetes,Diagnosis_3.GenetoUrinary,age..50.60.,readmitted)
+#top_task <- filterFeatures(train_task, method = "rf.importance", abs = 6)
+#train_task = makeClassifTask(data = train_data,
+#                              target = 'readmitted',positive = '1')
+
+#train_task <- normalizeFeatures(train_task,method = "standardize")
+rf = makeLearner('classif.randomForest', predict.type='prob')
+#rforest <- train(rf, train_task)
+total = data_cleaned %>% select(-encounter_id)
+total = total %>% select(number_inpatient,number_emergency,num_medications,time_in_hospital,change.Ch,change.No,num_lab_procedures,Diagnosis_1.Diabetes,Diagnosis_3.GenetoUrinary,age..50.60.,readmitted)
+#Cross Validation
+overall_task = makeClassifTask(data = total,
+                             target = 'readmitted',
+                             positive = '1')
+
+#resample_method = makeResampleDesc('Holdout', split = 2/3)
+resample_method = makeResampleDesc('CV', iters = 5)
+
+set.seed(1000)
+resample_performance = resample(learner = rf,
+                                task = overall_task,
+                                resampling = resample_method,
+                                measures = list(acc, auc, ppv, tpr))
+
+# predictions = predict(rforest, newdata = test_data)
+# calculateConfusionMatrix(predictions)
+# performance(predictions,measures = list(acc,auc,ppv,tpr))
+```
+
+
+
+
+```{r}
+# library("FSelector")
+# im_feat <- generateFilterValuesData(train_task, method = c("information.gain","chi.squared"))
+# plotFilterValues(im_feat,n.show = 20)
+
+# plotFilterValuesGGVIS(im_feat)
+##Plotting feature importance
+#data_cleaned = data_cleaned %>% select(-encounter_id)
+
+lrn = makeLearner('classif.randomForestSRC', predict.type='prob',par.vals = list(ntree = 2048))
+#getParamSet("classif.randomForestSRC")
+rf_ps <- makeParamSet(
+makeIntegerParam("ntree",lower = 1000, upper = 2000),
+makeIntegerParam("mtry", lower = 3, upper = 10),
+makeIntegerParam("nodesize", lower = 10, upper = 50)
+)
+
+#define search function
+rancontrol <- makeTuneControlRandom(maxit = 10L) #do 100 iterations
+
+#3 fold cross validation
+set_cv <- makeResampleDesc("CV",iters = 3L)
+
+#tune parameters
+rf_tune <- tuneParams(learner = lrn, task = train_task, resampling = set_cv,measures = auc,par.set = rf_ps, control = rancontrol)
+
+rforest = train(learner = lrn,
+               task = train_task)
+
+predictions = predict(rforest, newdata = test_data)
+calculateConfusionMatrix(predictions)
+performance(predictions,measures = list(acc,auc,ppv,tpr))
+
+# library(caret)
+# system.time(Mod1 <- train(readmitted ~ ., method = "rf",
+#                data = train_data, importance = T,
+#                trControl = trainControl(method = "cv", number = 3)))
+# 
+# 
+# 
+# # Mod1$finalModel
+# vi <- varImp(Mod1)
+# vi$importance[1:10,]
+# 
+# # out-of-sample errors of random forest model using validation dataset 
+# pred1 <- predict(Mod1, val)
+# cm1 <- confusionMatrix(pred1, val$classe)
+
+#total = data_cleaned %>% select(-encounter_id)
+##Cross Validation
+# overall_task = makeClassifTask(data = total,
+#                              target = 'readmitted',
+#                              positive = 'Yes')
+# 
+# #resample_method = makeResampleDesc('Holdout', split = 2/3)
+# resample_method = makeResampleDesc('CV', iters = 5)
+# 
+# set.seed(1000)
+# resample_performance = resample(learner = lrn,
+#                                 task = overall_task,
+#                                 resampling = resample_method,
+#                                 measures = list(acc, auc, ppv, tpr))
+
+```
+
+
+
+```{r}
+#Missing data Plot
+data_cleaned = data_cleaned %>% select(-Diagnosis_1,-Diagnosis_2,-Diagnosis_3)
+data_cleaned[data_cleaned == '?'] = NA
+library(Amelia)
+missmap(data_cleaned, main = "Missing values vs observed")
+```
+
+```{r}
+#The correlation plot
+library(polycor)
+x = hetcor(data,use="pairwise.complete.obs")
+corrplot(x[["correlations"]],method = color)
+```
+
+```{r}
+##Equal Data
+X = data_cleaned[ sample( which( data_cleaned$readmitted == "0" ) , 9980 ) , ]
+Y = data_cleaned[ sample( which( data_cleaned$readmitted == "1" ) , 9980 ) , ]
+data_total = full_join(X,Y)
+
+
+set.seed(1000)
+
+train_data = data_total %>% sample_frac(0.66)
+
+test_data = setdiff(data_total,train_data)
+
+# remove the id (not important for prediction)
+train_data = train_data %>% select(-encounter_id)
+test_data = test_data %>% select(-encounter_id)
+
+total = data_total %>% select(-encounter_id)
+train_task = makeClassifTask(data = train_data,
+                              target = 'readmitted',positive = '1')
+
+rf = makeLearner("classif.neuralnet", predict.type = "prob",hidden = 3, threshold = 0.01,rep = 10)
+top_task <- filterFeatures(train_task, method = "rf.importance", abs = 6)
+rf_ps <- makeParamSet(
+makeIntegerParam("ntree",lower = 1000, upper = 2000),
+makeIntegerParam("mtry", lower = 3, upper = 10),
+makeIntegerParam("nodesize", lower = 10, upper = 50)
+)
+
+#define search function
+rancontrol <- makeTuneControlRandom(maxit = 10L) #do 100 iterations
+
+#3 fold cross validation
+set_cv <- makeResampleDesc("CV",iters = 3L)
+
+#tune parameters
+rf_tune <- tuneParams(learner = rf, task = train_task, resampling = set_cv,measures = auc,par.set = rf_ps, control = rancontrol)
+
+rforest <- train(rf, train_task)
+predictions = predict(rforest, newdata = test_data)
+#pred2 = setThreshold(predictions, 0.355)
+calculateConfusionMatrix(predictions)
+performance(predictions,measures = list(acc,auc,ppv,tpr))
+
+# calculateConfusionMatrix(pred2)
+# performance(pred2,measures = list(acc,auc,ppv,tpr))
+#head(getPredictionProbabilities(pred2, cl = c("1", "0")))
+# overall_task = makeClassifTask(data = total,
+#                              target = 'readmitted',
+#                              positive = '1')
+# 
+# #resample_method = makeResampleDesc('Holdout', split = 2/3)
+# resample_method = makeResampleDesc('CV', iters = 10)
+# 
+# set.seed(1000)
+# resample_performance = resample(learner = rf,
+#                                 task = overall_task,
+#                                 resampling = resample_method,
+#                                 measures = list(acc, auc, ppv, tpr))
+
+```
+
+```{r}
+#library(caret)
+
+X = data_cleaned[ sample( which( data_cleaned$readmitted == "1" ) , 9980 ) , ]
+Y = data_cleaned[ sample( which( data_cleaned$readmitted == "0" ) , 9980 ) , ]
+data_total = full_join(X,Y)
+
+#data_total = data_total %>% mutate_if(is.factor, as.numeric)
+# data_total = data_total %>% select(encounter_id,number_inpatient,number_emergency,num_medications,time_in_hospital,change.Ch,change.No,num_lab_procedures,Diagnosis_1.Diabetes,Diagnosis_3.GenetoUrinary,age..50.60.,readmitted)
+
+
+set.seed(1000)
+train_data = data_total %>% sample_frac(0.66)
+
+test_data = setdiff(data_total,train_data)
+
+# remove the id (not important for prediction)
+train_data = train_data %>% select(-encounter_id)
+test_data = test_data %>% select(-encounter_id)
+
+
+# test_data = test_data %>% mutate_if(is.factor, as.character)
+
+train_task = makeClassifTask(data = train_data,
+                              target = 'readmitted',positive = '1')
+#XGBOOST
+getParamSet("classif.qda")
+xg_set <- makeLearner("classif.svm", kernel = "polynomial",predict.type = "prob")
+
+#define parameters for tuning
+# xg_ps <- makeParamSet(
+# makeIntegerParam("nrounds",lower=200,upper=600),
+# makeIntegerParam("max_depth",lower=3,upper=20),
+# makeNumericParam("lambda",lower=0.55,upper=0.60),
+# makeNumericParam("eta", lower = 0.001, upper = 0.5),
+# makeNumericParam("subsample", lower = 0.10, upper = 0.80),
+# makeNumericParam("min_child_weight",lower=1,upper=5),
+# makeNumericParam("colsample_bytree",lower = 0.2,upper = 0.8)
+# )
+# # 
+# # #define search function
+# rancontrol <- makeTuneControlRandom(maxit = 20L) #do 100 iterations
+# # 
+# #3 fold cross validation
+# set_cv <- makeResampleDesc("CV",iters = 3L)
+# 
+# #tune parameters
+# xg_tune <- tuneParams(learner = xg_set, task = train_task, resampling = set_cv,measures = auc,par.set = xg_ps, control = rancontrol)
+# 
+# #set parameters
+# xg_new <- setHyperPars(learner = xg_set, par.vals = xg_tune$x)
+
+#train model
+xgmodel <- train(xg_set, train_task)
+
+#test model
+predictions <- predict(xgmodel, newdata = test_data )
+calculateConfusionMatrix(predictions)
+performance(predictions,measures = list(acc,auc,ppv,tpr))
+
+plotLearnerPrediction(learner =xg_set, task = train_task)
+```
+
