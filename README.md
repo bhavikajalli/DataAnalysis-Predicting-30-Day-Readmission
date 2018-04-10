@@ -22,7 +22,8 @@ The criteria for Data Extraction included:
 
 #### Features
 The dataset after cleaning has a total of  57,251 observations and 13 features. The features have been selected based on their Information Gain and Chi-Square Gain
-<img src="https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/IG.png" width="480">
+
+<img src="https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/IG.png" width="640">
 
 The final features selected are HbA1C, Age, Race, Gender, Admin Type, Length Stay, Number of Medications, Diagnosis, Number of Inpatient Encounters, Number of Emergency Visits, Number of Lab Tests, Number of Outpatient and Diabetes Medication
 
