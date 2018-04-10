@@ -22,7 +22,7 @@ The criteria for Data Extraction included:
 
 #### Features
 The dataset after cleaning has a total of  57,251 observations and 13 features. The features have been selected based on their Information Gain and Chi-Square Gain
-![alt text](https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/IG.png)
+<img src="https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/IG.png" width="48">
 
 The final features selected are HbA1C, Age, Race, Gender, Admin Type, Length Stay, Number of Medications, Diagnosis, Number of Inpatient Encounters, Number of Emergency Visits, Number of Lab Tests, Number of Outpatient and Diabetes Medication
 
@@ -35,6 +35,12 @@ The Correlation between the features was plotted as following
 ![alt text](https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/corr.png )
 
 The features are independent of each other and can be used to predict the 30 Day readmittance rate.
+
+#### The Random Forrest Model
+I first tried a Random Forest model form the mlr library. After performing Hyper parameter tuning with Random Search. The highest AUC was achieved at Ntree = 448; mtry = 4;  nodeSize = 12.
+The AUC was 0.678. 
+![alt text](https://github.com/bhavikajalli/DataAnalysis-Predicting-30-Day-Readmission/blob/master/Images/auc.png )
+
 
 
 
